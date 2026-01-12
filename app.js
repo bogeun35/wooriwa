@@ -2,9 +2,9 @@
 // 설정 영역 - 여기를 수정하세요!
 // ========================================
 const CONFIG = {
-    REDASH_URL: 'https://your-redash-server.com',  // Redash 서버 URL
-    API_KEY: 'YOUR_API_KEY_HERE',                   // Redash API Key
-    QUERY_ID: 'YOUR_QUERY_ID',                      // 쿼리 ID
+    REDASH_URL: 'https://redash.sikdae.com',  // Redash 서버 URL
+    API_KEY: '3YxpesqTXvZtQCPHmVlw2UsFIaOkUrsvCgek0CSv',                   // Redash API Key
+    QUERY_ID: '1335',                      // 쿼리 ID
 };
 
 // ========================================
