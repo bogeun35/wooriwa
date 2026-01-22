@@ -3,16 +3,472 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>단체선물 주문 현황</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>주문 현황</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { 
+            max-width: 1800px; 
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .header-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #666;
+            flex-wrap: wrap;
+        }
+        
+        .primary-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .primary-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-excel {
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-excel:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-title {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .card-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status-none { color: #6c757d; }
+        .status-selected { color: #007bff; }
+        .status-confirmed { color: #ffc107; }
+        .status-delivered { color: #28a745; }
+        
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+        
+        .main-content {
+            min-width: 0;
+        }
+        
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            align-self: start;
+        }
+        
+        .summary-panel {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 25px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .summary-panel h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        
+        .product-summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .product-summary-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.2s;
+        }
+        
+        .product-summary-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .product-code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .product-name-summary {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        .product-count {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #667eea;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        select {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background: white;
+        }
+        
+        .loading, .error {
+            padding: 40px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        .loading {
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin: 20px 30px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 0 30px 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+        
+        thead {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        td {
+            padding: 15px;
+            color: #495057;
+        }
+        
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: zoom-in;
+        }
+        
+        .no-image {
+            width: 60px;
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 11px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-미선택 {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .status-선택완료 {
+            background: #cfe2ff;
+            color: #084298;
+        }
+        
+        .status-주문확정 {
+            background: #fff3cd;
+            color: #664d03;
+        }
+        
+        .status-배송완료 {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .pagination button {
+            padding: 10px 15px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .pagination button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .image-zoom-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            cursor: zoom-out;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-zoom-overlay.active { display: flex; }
+        .image-zoom-content { max-width: 90%; max-height: 90%; object-fit: contain; }
+        
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+            
+            .summary-panel {
+                max-height: 500px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+            
+            .table-wrapper {
+                padding: 0 15px 15px;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎁 단체선물 주문 현황</h1>
+            <h1> 한양대에리카 주문 현황</h1>
             <div class="header-info">
-                <span id="templateInfo">템플릿 번호: <strong id="templateNumber">-</strong></span>
                 <span id="updateTime">마지막 업데이트: <strong id="lastUpdate">-</strong></span>
+                <div style="display: flex; gap: 10px;">
+                    <button class="primary-btn" onclick="loadData()"> 새로고침</button>
+                    <button class="btn-excel" onclick="downloadExcel()"> 엑셀 다운로드</button>
+                </div>
             </div>
         </header>
 
@@ -39,45 +495,514 @@
             </div>
         </div>
 
-        <div class="controls">
-            <input type="text" id="searchInput" placeholder="이름, 전화번호, 상품명으로 검색...">
-            <select id="statusFilter">
-                <option value="">전체 상태</option>
-                <option value="미선택">미선택</option>
-                <option value="선택완료">선택완료</option>
-                <option value="주문확정">주문확정</option>
-                <option value="배송완료">배송완료</option>
-            </select>
-            <button id="refreshBtn">🔄 새로고침</button>
-        </div>
+        <div class="content-wrapper">
+            <!-- 좌측: 주문 목록 -->
+            <div class="main-content">
+                <div class="table-container">
+                    <div class="controls">
+                        <input type="text" id="searchInput" class="search-box" placeholder="이름, 전화번호, 상품명으로 검색...">
+                        <select id="statusFilter">
+                            <option value="">전체 상태</option>
+                            <option value="미선택">미선택</option>
+                            <option value="선택완료">선택완료</option>
+                            <option value="주문확정">주문확정</option>
+                            <option value="배송완료">배송완료</option>
+                        </select>
+                    </div>
 
-        <div id="loading" class="loading">데이터를 불러오는 중...</div>
-        <div id="error" class="error" style="display: none;"></div>
+                    <div id="loading" class="loading" style="display: none;">
+                        <div class="spinner"></div>
+                        데이터를 불러오는 중...
+                    </div>
+                    <div id="error" class="error" style="display: none;"></div>
 
-        <div class="table-container">
-            <table id="ordersTable">
-                <thead>
-                    <tr>
-                        <th>번호</th>
-                        <th>상품코드</th>
-                        <th>상품명</th>
-                        <th>상품이미지</th>
-                        <th>수령인</th>
-                        <th>연락처</th>
-                        <th>상태</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <!-- 데이터가 여기에 표시됩니다 -->
-                </tbody>
-            </table>
-        </div>
+                    <div class="table-wrapper">
+                        <table id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>상품코드</th>
+                                    <th>상품명</th>
+                                    <th>상품이미지</th>
+                                    <th>수령인</th>
+                                    <th>연락처</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
+                                        데이터를 불러오는 중입니다...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-        <div class="pagination" id="pagination">
-            <!-- 페이지네이션 버튼이 여기에 표시됩니다 -->
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+
+            <!-- 우측: 상품별 요약 -->
+            <div class="sidebar">
+                <div class="summary-panel">
+                    <h2>📊 상품별 요약</h2>
+                    <div id="productSummary" class="product-summary-list">
+                        <div style="text-align: center; padding: 40px; color: #999;">
+                            데이터를 불러오는 중...
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <div class="image-zoom-overlay" id="imageZoomOverlay" onclick="closeZoom()">
+        <img class="image-zoom-content" id="imageZoomContent" src="" alt="">
+    </div>
+
+    <script>
+        // ========================================
+        // 설정 영역 - 여기에 구글 시트 CSV URL을 입력하세요
+        // ========================================
+        const CONFIG = {
+            SHEET_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT18y-O0crmeMVOqjOeb7wUhypyw6ji_04pRuf5kL6o6QCizpGtWZ0NEUON2xCwvTdGPMI8GPHNHnT4/pub?gid=16126886&single=true&output=csv',
+        };
+
+        // ========================================
+        // 전역 변수
+        // ========================================
+        let allOrders = [];
+        let filteredOrders = [];
+        let currentPage = 1;
+        const itemsPerPage = 50;
+
+        // ========================================
+        // CSV 파싱 함수
+        // ========================================
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        currentCell += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentCell);
+                    currentCell = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++;
+                    if (currentCell || currentRow.length > 0) {
+                        currentRow.push(currentCell);
+                        if (currentRow.some(cell => cell.trim())) {
+                            rows.push(currentRow);
+                        }
+                        currentRow = [];
+                        currentCell = '';
+                    }
+                } else {
+                    currentCell += char;
+                }
+            }
+            
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell);
+                if (currentRow.some(cell => cell.trim())) {
+                    rows.push(currentRow);
+                }
+            }
+            
+            return rows;
+        }
+
+        // ========================================
+        // 데이터 로드
+        // ========================================
+        async function loadData() {
+            try {
+                showLoading(true);
+                hideError();
+                
+                const response = await fetch(CONFIG.SHEET_CSV_URL, {
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error('데이터가 비어있습니다.');
+                }
+                
+                const rows = parseCSV(csvText);
+                
+                if (rows.length < 2) {
+                    throw new Error('유효한 데이터가 없습니다.');
+                }
+                
+                const headers = rows[0];
+                const dataRows = rows.slice(1);
+                
+                // CSV를 객체 배열로 변환
+                allOrders = dataRows.map((row, index) => {
+                    const obj = {};
+                    headers.forEach((header, idx) => {
+                        const value = row[idx] || '';
+                        obj[header] = typeof value === 'string' ? value.trim() : value;
+                    });
+                    return obj;
+                }).filter(order => order.productName || order.receiverName); // 빈 행 제외
+                
+                if (allOrders.length === 0) {
+                    showError('조회된 데이터가 없습니다.');
+                    return;
+                }
+                
+                filteredOrders = [...allOrders];
+                
+                updateSummary();
+                updateProductSummary();
+                updateLastUpdateTime();
+                applyFilters();
+                
+            } catch (error) {
+                console.error('데이터 로딩 실패:', error);
+                showError(`데이터를 불러오는데 실패했습니다: ${error.message}`);
+                allOrders = [];
+                filteredOrders = [];
+                updateSummary();
+                updateProductSummary();
+                renderTable();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ========================================
+        // 요약 통계 업데이트
+        // ========================================
+        function updateSummary() {
+            const statusCounts = {
+                total: allOrders.length,
+                none: 0,
+                selected: 0,
+                confirmed: 0,
+                delivered: 0
+            };
+            
+            allOrders.forEach(order => {
+                const status = order.status;
+                if (status === '미선택') statusCounts.none++;
+                else if (status === '선택완료') statusCounts.selected++;
+                else if (status === '주문확정') statusCounts.confirmed++;
+                else if (status === '배송완료') statusCounts.delivered++;
+            });
+            
+            document.getElementById('totalCount').textContent = statusCounts.total;
+            document.getElementById('noneCount').textContent = statusCounts.none;
+            document.getElementById('selectedCount').textContent = statusCounts.selected;
+            document.getElementById('confirmedCount').textContent = statusCounts.confirmed;
+            document.getElementById('deliveredCount').textContent = statusCounts.delivered;
+        }
+
+        // ========================================
+        // 상품별 요약 업데이트
+        // ========================================
+        function updateProductSummary() {
+            const productMap = {};
+            
+            allOrders.forEach(order => {
+                const code = order.productCode || '미지정';
+                const name = order.productName || '미지정';
+                const key = `${code}_${name}`;
+                
+                if (!productMap[key]) {
+                    productMap[key] = {
+                        code: code,
+                        name: name,
+                        count: 0
+                    };
+                }
+                productMap[key].count++;
+            });
+            
+            const products = Object.values(productMap).sort((a, b) => b.count - a.count);
+            
+            const summaryDiv = document.getElementById('productSummary');
+            
+            if (products.length === 0) {
+                summaryDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">데이터가 없습니다.</div>';
+                return;
+            }
+            
+            summaryDiv.innerHTML = products.map(product => `
+                <div class="product-summary-item">
+                    <div class="product-code">${product.code}</div>
+                    <div class="product-name-summary">${product.name}</div>
+                    <div class="product-count">
+                        <span>주문수량</span>
+                        <span>${product.count}개</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('lastUpdate').textContent = timeString;
+        }
+
+        // ========================================
+        // 엑셀 다운로드
+        // ========================================
+        function downloadExcel() {
+            if (allOrders.length === 0) {
+                alert('다운로드할 데이터가 없습니다.');
+                return;
+            }
+            
+            // 주문 데이터 시트
+            const orderData = allOrders.map((order, index) => ({
+                '번호': index + 1,
+                '상품코드': order.productCode || '',
+                '상품명': order.productName || '',
+                '수령인': order.receiverName || '',
+                '연락처': order.receiverPhone || '',
+                '상태': order.status || ''
+            }));
+            
+            // 상품별 요약 시트
+            const productMap = {};
+            allOrders.forEach(order => {
+                const code = order.productCode || '미지정';
+                const name = order.productName || '미지정';
+                const key = `${code}_${name}`;
+                
+                if (!productMap[key]) {
+                    productMap[key] = {
+                        code: code,
+                        name: name,
+                        count: 0
+                    };
+                }
+                productMap[key].count++;
+            });
+            
+            const productData = Object.values(productMap)
+                .sort((a, b) => b.count - a.count)
+                .map(product => ({
+                    '상품코드': product.code,
+                    '상품명': product.name,
+                    '주문수량': product.count
+                }));
+            
+            // 워크북 생성
+            const wb = XLSX.utils.book_new();
+            
+            // 주문 목록 시트
+            const ws1 = XLSX.utils.json_to_sheet(orderData);
+            XLSX.utils.book_append_sheet(wb, ws1, "주문목록");
+            
+            // 상품별 요약 시트
+            const ws2 = XLSX.utils.json_to_sheet(productData);
+            XLSX.utils.book_append_sheet(wb, ws2, "상품별요약");
+            
+            // 파일 다운로드
+            const fileName = `단체선물_주문현황_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // ========================================
+        // 필터 적용
+        // ========================================
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredOrders = allOrders.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    (order.receiverName && order.receiverName.toLowerCase().includes(searchTerm)) ||
+                    (order.receiverPhone && order.receiverPhone.toLowerCase().includes(searchTerm)) ||
+                    (order.productName && order.productName.toLowerCase().includes(searchTerm)) ||
+                    (order.productCode && order.productCode.toLowerCase().includes(searchTerm));
+                
+                const matchesStatus = !statusFilter || order.status === statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+        }
+
+        // ========================================
+        // 테이블 렌더링
+        // ========================================
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageOrders = filteredOrders.slice(startIndex, endIndex);
+            
+            if (pageOrders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
+                            ${allOrders.length === 0 ? '데이터를 불러오는 중입니다...' : '검색 결과가 없습니다.'}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = pageOrders.map((order, index) => `
+                <tr>
+                    <td>${startIndex + index + 1}</td>
+                    <td>${order.productCode || '-'}</td>
+                    <td>${order.productName || '-'}</td>
+                    <td>
+                        ${order.thumbnailImageUrl 
+                            ? `<img src="${order.thumbnailImageUrl}" alt="상품이미지" class="product-image" 
+                                    onclick="zoomImage('${order.thumbnailImageUrl}')"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                               <div class="no-image" style="display:none">이미지<br>준비중</div>` 
+                            : '<div class="no-image">이미지<br>준비중</div>'}
+                    </td>
+                    <td>${order.receiverName || '-'}</td>
+                    <td>${order.receiverPhone || '-'}</td>
+                    <td><span class="status-badge status-${order.status}">${order.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // ========================================
+        // 페이지네이션
+        // ========================================
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">이전</button>`;
+            
+            const maxButtons = 10;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+            
+            if (startPage > 1) {
+                html += `<button onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) html += `<button disabled>...</button>`;
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<button disabled>...</button>`;
+                html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">다음</button>`;
+            
+            pagination.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+            renderPagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ========================================
+        // 이미지 확대
+        // ========================================
+        function zoomImage(src) {
+            const overlay = document.getElementById('imageZoomOverlay');
+            const img = document.getElementById('imageZoomContent');
+            img.src = src;
+            overlay.classList.add('active');
+        }
+
+        function closeZoom() {
+            document.getElementById('imageZoomOverlay').classList.remove('active');
+        }
+
+        // ========================================
+        // UI 헬퍼 함수
+        // ========================================
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func(...args), wait);
+            };
+        }
+
+        // ========================================
+        // 이벤트 리스너
+        // ========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // 페이지 로드 시 자동으로 데이터 로드
+            loadData();
+            
+            // 검색 및 필터
+            document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        });
+
+        window.goToPage = goToPage;
+        window.zoomImage = zoomImage;
+        window.closeZoom = closeZoom;
+        window.loadData = loadData;
+        window.downloadExcel = downloadExcel;
+    </script>
 </body>
 </html>
